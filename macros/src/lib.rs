@@ -2,6 +2,7 @@
 #![deny(unused)]
 
 use proc_macro2::{Ident, TokenStream};
+use std::env;
 use quote::{format_ident, quote};
 use syn::{
     parse_quote, spanned::Spanned, ConstParam, GenericParam, Generics, Item, LifetimeDef, Result,
@@ -29,7 +30,11 @@ struct DerivedTS {
 
 impl DerivedTS {
     fn generate_export_test(&self, rust_ty: &Ident, generics: &Generics) -> Option<TokenStream> {
+        if env::var("TSRSBINDINGS").is_err() {
+            return None;
+        }
         let test_fn = format_ident!("export_bindings_{}", &self.name.to_lowercase());
+        println!("Generating TS-RS bindings generator for {}", &self.name.to_lowercase());
         let generic_params = generics
             .params
             .iter()

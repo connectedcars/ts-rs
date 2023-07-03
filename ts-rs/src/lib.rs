@@ -135,8 +135,14 @@
 use std::{
     any::TypeId,
     collections::{BTreeMap, BTreeSet, HashMap, HashSet},
+    net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
+    num::{
+        NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize, NonZeroU128,
+        NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
+    },
     ops::{Range, RangeInclusive},
     path::{Path, PathBuf},
+    time::Duration
 };
 
 pub use ts_rs_macros::TS;
@@ -181,7 +187,7 @@ mod export;
 ///
 /// - `#[ts(rename_all = "..")]`:  
 ///   Rename all fields/variants of the type.
-///   Valid values are `lowercase`, `UPPERCASE`, `camelCase`, `snake_case`, `PascalCase`, `SCREAMING_SNAKE_CASE`
+///   Valid values are `lowercase`, `UPPERCASE`, `camelCase`, `snake_case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, "kebab-case"
 ///
 ///
 /// ### struct field attributes
@@ -221,7 +227,7 @@ mod export;
 ///
 /// - `#[ts(rename_all = "..")]`:  
 ///   Rename all variants of this enum.  
-///   Valid values are `lowercase`, `UPPERCASE`, `camelCase`, `snake_case`, `PascalCase`, `SCREAMING_SNAKE_CASE`
+///   Valid values are `lowercase`, `UPPERCASE`, `camelCase`, `snake_case`, `PascalCase`, `SCREAMING_SNAKE_CASE`, "kebab-case"
 ///  
 /// ### enum variant attributes
 ///
@@ -571,11 +577,18 @@ mod bytes {
     impl_shadow!(as Vec<u8>: impl TS for bytes::BytesMut);
 }
 
+impl_primitives!(Duration => "string");
+
 impl_primitives! {
-    u8, i8, u16, i16, u32, i32, f32, f64, usize, isize => "number",
-    u64, i64, u128, i128 => "bigint",
+    u8, i8, NonZeroU8, NonZeroI8,
+    u16, i16, NonZeroU16, NonZeroI16,
+    u32, i32, NonZeroU32, NonZeroI32,
+    usize, isize, NonZeroUsize, NonZeroIsize, f32, f64 => "number",
+    u64, i64, NonZeroU64, NonZeroI64,
+    u128, i128, NonZeroU128, NonZeroI128 => "bigint",
     bool => "boolean",
-    Path, PathBuf, String, &'static str => "string",
+    char, Path, PathBuf, String, &'static str,
+    Ipv4Addr, Ipv6Addr, IpAddr, SocketAddrV4, SocketAddrV6, SocketAddr => "string",
     () => "null"
 }
 #[rustfmt::skip]

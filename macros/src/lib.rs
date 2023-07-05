@@ -185,8 +185,8 @@ fn generate_sample_test(rust_ty: &Ident) -> TokenStream {
             let export_to = #ts_ty::EXPORT_TO.unwrap().replace("bindings", "samples");
             let export_to_json = export_to.replace(".ts", ".json");
             let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
-            let manifest_dir = Path::new(&manifest_dir);
-            let path = PathBuf::from(export_to_json);
+            let manifest_dir = std::path::Path::new(&manifest_dir);
+            let path = std::path::PathBuf::from(export_to_json);
             let sample_path = manifest_dir.join(path);
 
             // Create JSON value for the sample using Default to generate it
@@ -194,9 +194,9 @@ fn generate_sample_test(rust_ty: &Ident) -> TokenStream {
             let out = serde_json::to_string(&val).unwrap();
 
             if let Some(parent) = path.as_ref().parent() {
-                std::fs::create_dir_all(parent)?;
+                std::fs::create_dir_all(parent).unwrap();
             }
-            std::fs::write(path.as_ref(), &buffer)?;
+            std::fs::write(path.as_ref(), &out).unwrap();
         }
     }
 }

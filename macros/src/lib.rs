@@ -113,6 +113,39 @@ impl DerivedTS {
     }
 }
 
+fn generate_sample_test(rust_ty: &Ident) -> TokenStream {
+    if env::var("TSRSBINDINGS").is_err() {
+        return TokenStream::new()
+    }
+    let test_fn = format_ident!("export_samples_{}", &rust_ty.to_string().to_lowercase());
+    println!("Generating TS-RS sample generator for {}", &rust_ty.to_string().to_lowercase());
+    let ts_ty = quote!(<#rust_ty as ts_rs::TS>);
+
+    quote! {
+        #[cfg(test)]
+        #[test]
+        fn #test_fn() {
+            
+            // Hacky way to fix up the export path that is already generated
+            let export_to = #ts_ty::EXPORT_TO.unwrap().replace("bindings", "samples");
+            let export_to_json = export_to.replace(".ts", ".json");
+            let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+            let manifest_dir = Path::new(&manifest_dir);
+            let path = PathBuf::from(export_to_json);
+            let sample_path = manifest_dir.join(path);
+            
+            // Create JSON value for the sample using Default to generate it
+            let val = #rust_ty::default();
+            let out = serde_json::to_string(&val).unwrap();
+
+            if let Some(parent) = path.as_ref().parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            std::fs::write(path.as_ref(), &buffer)?;
+        }
+    }
+}
+
 // generate start of the `impl TS for #ty` block, up to (excluding) the open brace
 fn generate_impl(ty: &Ident, generics: &Generics) -> TokenStream {
     use GenericParam::*;
@@ -179,6 +212,16 @@ pub fn typescript(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     .into()
 }
 
+/// Creates a sample JSON that can be used to validate the generated TS
+#[proc_macro_derive(Sample)]
+pub fn sample(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    match entry_sample(input) {
+        Err(err) => err.to_compile_error(),
+        Ok(result) => result,
+    }
+    .into()
+}
+
 fn entry(input: proc_macro::TokenStream) -> Result<TokenStream> {
     let input = syn::parse::<Item>(input)?;
     let (ts, ident, generics) = match input {
@@ -188,4 +231,15 @@ fn entry(input: proc_macro::TokenStream) -> Result<TokenStream> {
     };
 
     Ok(ts.into_impl(ident, generics))
+}
+
+fn entry_sample(input: proc_macro::TokenStream) -> Result<TokenStream> {
+    let input = syn::parse::<Item>(input)?;
+    let ident = match input {
+        Item::Struct(s) => s.ident,
+        Item::Enum(e) => e.ident,
+        _ => syn_err!(input.span(); "unsupported item"),
+    };
+
+    Ok(generate_sample_test(&ident))
 }
